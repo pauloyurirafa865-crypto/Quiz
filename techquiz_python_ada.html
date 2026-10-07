@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechQuiz — Python & Ada Lovelace</title>
+<style>
+:root{
+  --bg:#060912; --panel:#0c1220; --panel2:#10192b; --text:#eef5ff;
+  --muted:#91a1b8; --cyan:#29d9ff; --purple:#8b5cf6; --green:#35e39a;
+  --red:#ff5c7a; --border:rgba(113,143,190,.22);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--text); background:
+  radial-gradient(circle at 15% 10%,rgba(41,217,255,.10),transparent 30%),
+  radial-gradient(circle at 85% 80%,rgba(139,92,246,.13),transparent 32%),var(--bg);
+}
+body:before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.15;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.container{width:min(1000px,92%);margin:auto;position:relative}
+header{padding:42px 0 22px;text-align:center}
+.logo{display:inline-flex;align-items:center;gap:10px;font-weight:900;letter-spacing:2px;font-size:14px;color:var(--cyan)}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan)}
+h1{font-size:clamp(36px,7vw,68px);line-height:1;margin:18px 0 12px;letter-spacing:-3px}
+.gradient{background:linear-gradient(90deg,var(--cyan),#fff,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{color:var(--muted);font-size:16px}
+.screen{display:none}.screen.active{display:block}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0 55px}
+.level{
+  border:1px solid var(--border);background:linear-gradient(145deg,rgba(16,25,43,.92),rgba(8,13,25,.92));
+  border-radius:20px;padding:25px;cursor:pointer;transition:.25s;min-height:180px;
+}
+.level:hover:not(.disabled){transform:translateY(-5px);border-color:rgba(41,217,255,.65);box-shadow:0 15px 40px rgba(0,0,0,.3)}
+.level.disabled{opacity:.45;cursor:not-allowed}
+.level-icon{font-size:28px;margin-bottom:18px}.level h2{margin:0 0 8px}.level p{margin:0;color:var(--muted);line-height:1.5}
+.badge{display:inline-block;margin-top:18px;font-size:11px;letter-spacing:1px;padding:6px 9px;border:1px solid var(--border);border-radius:999px;color:var(--cyan)}
+.quiz-head{display:flex;justify-content:space-between;align-items:center;margin:28px 0 15px;gap:15px}
+.progress-wrap{height:7px;background:#172237;border-radius:99px;overflow:hidden}.progress{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:.3s}
+.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:24px}
+.card{background:rgba(12,18,32,.94);border:1px solid var(--border);border-radius:24px;padding:30px;box-shadow:0 22px 70px rgba(0,0,0,.25)}
+.question-row{display:flex;gap:14px;align-items:flex-start}
+.q-number{font:700 13px/1 monospace;color:var(--cyan);background:rgba(41,217,255,.09);border:1px solid rgba(41,217,255,.2);padding:9px;border-radius:9px}
+h2.question{font-size:clamp(20px,3vw,29px);line-height:1.35;margin:2px 0 25px}
+.hint-btn{
+  margin-left:auto;flex:none;border:1px solid rgba(139,92,246,.45);background:rgba(139,92,246,.10);
+  color:#c9b7ff;border-radius:12px;padding:9px 12px;cursor:pointer
+}
+.hint{display:none;margin:-8px 0 20px;padding:12px 14px;border-radius:12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);color:#c9b7ff;font-size:14px}
+.hint.show{display:block}
+.options{display:grid;gap:12px}
+.option{
+  width:100%;text-align:left;padding:16px 18px;border-radius:14px;border:1px solid var(--border);
+  background:#0d1627;color:var(--text);font-size:15px;cursor:pointer;transition:.18s
+}
+.option:hover:not(:disabled){border-color:rgba(41,217,255,.55);background:#111f34;transform:translateX(3px)}
+.option.selected{border-color:var(--cyan);background:rgba(41,217,255,.09)}
+.option.correct{border-color:var(--green);background:rgba(53,227,154,.11)}
+.option.wrong{border-color:var(--red);background:rgba(255,92,122,.10)}
+.option:disabled{cursor:default}
+.actions{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+button.primary{
+  border:0;border-radius:13px;padding:13px 20px;background:linear-gradient(90deg,var(--cyan),#5aa8ff);
+  color:#03101a;font-weight:800;cursor:pointer
+}
+button.secondary{border:1px solid var(--border);background:#0c1423;color:var(--text);border-radius:13px;padding:12px 17px;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.result{text-align:center;padding:45px 20px}
+.score-ring{
+  width:150px;height:150px;border-radius:50%;margin:0 auto 24px;display:grid;place-items:center;
+  background:conic-gradient(var(--cyan) 0deg,var(--purple) 0deg,#18243a 0deg);
+  position:relative
+}
+.score-ring:after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--panel)}
+.score-ring strong{position:relative;z-index:1;font-size:35px}
+.result h2{font-size:32px;margin:10px 0}.result p{color:var(--muted)}
+.prize{margin:22px auto;padding:16px;max-width:520px;border-radius:16px;border:1px solid rgba(53,227,154,.35);background:rgba(53,227,154,.08);color:#aef5d4}
+.review{margin:28px 0;text-align:left;display:grid;gap:10px}
+.review-item{padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:#0b1423}
+.review-item.ok{border-left:3px solid var(--green)}.review-item.no{border-left:3px solid var(--red)}
+.review-item small{color:var(--muted)}.review-item b{display:block;margin:5px 0}
+footer{text-align:center;color:#64748b;font-size:12px;padding:0 0 30px}
+.toast{position:fixed;right:20px;bottom:20px;padding:12px 16px;border:1px solid var(--border);background:#111a2b;border-radius:12px;color:var(--text);display:none}
+@media(max-width:700px){.levels{grid-template-columns:1fr}.card{padding:20px}.quiz-head{align-items:flex-start}.question-row{flex-wrap:wrap}.hint-btn{margin-left:0}.actions{gap:10px}.actions button{flex:1}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <div class="logo"><span class="dot"></span> TECHQUIZ // CODING LAB</div>
+  <h1>Desafie seu <span class="gradient">conhecimento.</span></h1>
+  <div class="subtitle">Python • Ada Lovelace • 10 desafios selecionados aleatoriamente</div>
+</header>
+
+<main id="home" class="screen active">
+  <div class="levels">
+    <div class="level" onclick="startQuiz()">
+      <div class="level-icon">⚡</div><h2>Fácil</h2>
+      <p>10 questões aleatórias: 5 de Python e 5 sobre Ada Lovelace.</p>
+      <span class="badge">DISPONÍVEL</span>
+    </div>
+    <div class="level disabled">
+      <div class="level-icon">◈</div><h2>Médio</h2>
+      <p>Novos desafios serão adicionados em breve.</p>
+      <span class="badge">EM BREVE</span>
+    </div>
+    <div class="level disabled">
+      <div class="level-icon">⬢</div><h2>Difícil</h2>
+      <p>Novos desafios serão adicionados em breve.</p>
+      <span class="badge">EM BREVE</span>
+    </div>
+  </div>
+</main>
+
+<section id="quiz" class="screen">
+  <div class="quiz-head"><button class="secondary" onclick="goHome()">← Menu</button><strong id="topic">PYTHON</strong></div>
+  <div class="progress-wrap"><div id="progress" class="progress"></div></div>
+  <div class="meta"><span id="counter">Questão 1 de 10</span><span id="liveScore">Acertos: 0</span></div>
+  <div class="card">
+    <div class="question-row">
+      <span id="qNum" class="q-number">01</span>
+      <h2 id="question" class="question">Carregando...</h2>
+      <button class="hint-btn" onclick="toggleHint()" title="Mostrar dica">💡 Dica</button>
+    </div>
+    <div id="hint" class="hint"></div>
+    <div id="options" class="options"></div>
+    <div class="actions">
+      <span id="feedback" style="color:var(--muted);font-size:13px"></span>
+      <button id="nextBtn" class="primary" disabled onclick="nextQuestion()">Próxima →</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="card result">
+    <div id="scoreRing" class="score-ring"><strong id="scoreText">0/10</strong></div>
+    <h2 id="resultTitle">Resultado</h2>
+    <p id="resultText"></p>
+    <div id="prize" class="prize" style="display:none">🏆 <strong>Você recebeu um prêmio!</strong><br>Parabéns por alcançar pelo menos 8 acertos.</div>
+    <div id="review" class="review"></div>
+    <button class="primary" onclick="startQuiz()">Jogar novamente</button>
+    <button class="secondary" style="margin-left:8px" onclick="goHome()">Voltar ao menu</button>
+  </div>
+</section>
+
+<footer>TECHQUIZ • Aprenda, responda e evolua.</footer>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const questions = [
+ {cat:"Python",q:"Qual é a principal função do comando print() em Python?",a:["Ler um dado inserido pelo usuário.","Exibir uma mensagem ou resultado na tela.","Somar dois números inteiros.","Criar uma variável no código."],c:1,h:"Pense no que aparece no terminal quando você usa este comando."},
+ {cat:"Python",q:"Qual é a saída correta do comando print(5 + 3 * 2)?",a:["16","11","10","13"],c:1,h:"A multiplicação é feita antes da soma."},
+ {cat:"Python",q:"Qual função em Python é usada para receber dados digitados pelo usuário?",a:["get()","read()","input()","write()"],c:2,h:"É a função usada para entrada de dados pelo teclado."},
+ {cat:"Python",q:"Como declaramos uma variável chamada idade que armazena o valor inteiro 15?",a:["int idade = 15;","idade := 15","idade = 15","var idade = 15"],c:2,h:"Em Python, a atribuição usa um único sinal de igual."},
+ {cat:"Python",q:"Qual dos seguintes tipos representa um texto (String) em Python?",a:["int","float","str","bool"],c:2,h:"É a abreviação de string."},
+ {cat:"Python",q:"Qual é o operador usado para verificar se dois valores são IGUAIS em Python?",a:["=","==","===","is"],c:1,h:"Ele usa dois sinais de igual."},
+ {cat:"Python",q:"O que o operador % (módulo) faz em Python?",a:["Calcula a porcentagem de um número.","Eleva um número a uma potência.","Retorna o resto de uma divisão inteira.","Divide um número por 100."],c:2,h:"Pense no que sobra depois de uma divisão inteira."},
+ {cat:"Python",q:"Qual das seguintes estruturas é usada para tomar decisões (condicional)?",a:["for","while","if / else","def"],c:2,h:"É a estrutura usada para dizer: se isso acontecer, faça aquilo."},
+ {cat:"Python",q:"O que a função len(\"Python\") retorna?",a:["6","5","\"Python\"","True"],c:0,h:"Conte quantos caracteres há na palavra."},
+ {cat:"Python",q:"Qual símbolo é usado em Python para escrever um comentário de uma linha?",a:["//","/*","#","--"],c:2,h:"É um símbolo único usado no começo do comentário."},
+ {cat:"Python",q:"Como convertemos um texto \"10\" em um número inteiro em Python?",a:["str(\"10\")","int(\"10\")","float(\"10\")","convert(\"10\")"],c:1,h:"Use a função cujo nome representa o tipo inteiro."},
+ {cat:"Python",q:"Qual será a saída do comando print(\"Olá \" + \"Mundo\")?",a:["OláMundo","Olá Mundo","Erro","\"Olá \" + \"Mundo\""],c:1,h:"O operador + pode juntar strings."},
+ {cat:"Python",q:"Qual tipo de dado pode assumir apenas os valores True ou False?",a:["str","float","bool","int"],c:2,h:"É o tipo lógico/booleano."},
+ {cat:"Python",q:"O que acontece se executarmos o código print(10 / 2) em Python?",a:["Exibe 5 (do tipo inteiro).","Exibe 5.0 (do tipo ponto flutuante).","Ocorre um erro de sintaxe.","Exibe 10/2."],c:1,h:"Em Python, a divisão com / produz um número de ponto flutuante."},
+ {cat:"Python",q:"Em Python, qual é o sinal correto utilizado para atribuir um valor a uma variável?",a:["->","=",":","=="],c:1,h:"Não confunda atribuição com comparação."},
+ {cat:"Ada Lovelace",q:"Em qual país Ada Lovelace nasceu?",a:["Brasil","Estados Unidos","Inglaterra (Reino Unido)","Japão"],c:2,h:"Ela nasceu no Reino Unido."},
+ {cat:"Ada Lovelace",q:"Qual é o título oficial concedido a Ada por seu casamento, pelo qual ela ficou mundialmente conhecida?",a:["Rainha da Inglaterra","Condessa de Lovelace","Princesa de Gales","Duquesa de Cambridge"],c:1,h:"O título contém o nome pelo qual ela ficou conhecida."},
+ {cat:"Ada Lovelace",q:"Na época de Ada Lovelace, os computadores como conhecemos hoje (com tela e teclado) já existiam?",a:["Sim, ela usava um notebook de última geração.","Sim, mas apenas em formato de computador de mesa.","Não, os computadores eletrônicos ainda não tinham sido inventados.","Não, as pessoas só usavam celulares."],c:2,h:"Pense na época histórica em que Ada viveu."},
+ {cat:"Ada Lovelace",q:"Quando Ada era criança, o que a sua mãe a incentivou a estudar para que ela não seguisse a carreira artística de seu pai?",a:["Pintura e Desenho","Dança e Teatro","Matemática e Ciência","Música e Culinária"],c:2,h:"A área envolve números, lógica e investigação."},
+ {cat:"Ada Lovelace",q:"Que tipo de máquina mecânica de voar Ada Lovelace tentou projetar quando ainda era uma adolescente?",a:["Um avião supersônico","Um foguete para ir à Lua","Uma máquina voadora (com asas mecânicas como as de um passarinho)","Um helicóptero com motor elétrico"],c:2,h:"A ideia tinha asas mecânicas inspiradas em um pássaro."},
+ {cat:"Ada Lovelace",q:"As instruções e códigos desenvolvidos por Ada Lovelace eram inseridos nas máquinas através de:",a:["Pendrives","Cartões perfurados (cartões de papel com furos)","Cabos USB","Disquetes mágicos"],c:1,h:"Era uma tecnologia física baseada em papel e furos."},
+ {cat:"Ada Lovelace",q:"O pai de Ada Lovelace era muito famoso em sua época por ser um:",a:["Poeta","Rei","Médico","Piloto"],c:0,h:"Ele era conhecido principalmente por sua poesia."},
+ {cat:"Ada Lovelace",q:"Hoje em dia, existe um dia do ano dedicado a celebrar as conquistas das mulheres na ciência e tecnologia em homenagem a Ada. Como é chamado esse dia?",a:["Dia da Informática","Dia Mundial da Internet","Ada Lovelace Day (Dia de Ada Lovelace)","Dia do Programador de Python"],c:2,h:"O nome do dia leva diretamente o nome de Ada."},
+ {cat:"Ada Lovelace",q:"Ada Lovelace faleceu ainda muito jovem, com apenas:",a:["20 anos","36 anos","50 anos","80 anos"],c:1,h:"A idade está na casa dos 30."},
+ {cat:"Ada Lovelace",q:"A ideia principal de Ada que mudou o mundo foi perceber que as máquinas do futuro não serviriam apenas para calcular números, mas também para processar:",a:["Apenas moedas de ouro","Qualquer tipo de informação (como música, imagens e textos)","Apenas equações de matemática básica","Apenas previsões do tempo"],c:1,h:"A ideia vai além de números: pense em diferentes formas de informação."}
+];
+
+let quiz=[], index=0, score=0, answered=false, userAnswers=[];
+
+function shuffle(arr){return [...arr].sort(()=>Math.random()-0.5)}
+function startQuiz(){
+  const py=shuffle(questions.filter(x=>x.cat==="Python")).slice(0,5);
+  const ada=shuffle(questions.filter(x=>x.cat==="Ada Lovelace")).slice(0,5);
+  quiz=shuffle([...py,...ada]); index=0; score=0; userAnswers=[];
+  show("quiz"); renderQuestion();
+}
+function show(id){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");window.scrollTo({top:0,behavior:"smooth"})}
+function renderQuestion(){
+  answered=false;
+  const item=quiz[index];
+  document.getElementById("topic").textContent=item.cat.toUpperCase();
+  document.getElementById("counter").textContent=`Questão ${index+1} de 10`;
+  document.getElementById("liveScore").textContent=`Acertos: ${score}`;
+  document.getElementById("progress").style.width=`${(index/10)*100}%`;
+  document.getElementById("qNum").textContent=String(index+1).padStart(2,"0");
+  document.getElementById("question").textContent=item.q;
+  document.getElementById("hint").textContent="💡 "+item.h;
+  document.getElementById("hint").classList.remove("show");
+  document.getElementById("feedback").textContent="";
+  const next=document.getElementById("nextBtn"); next.disabled=true;
+  next.textContent=index===9?"Ver resultado →":"Próxima →";
+  const opts=document.getElementById("options"); opts.innerHTML="";
+  item.a.forEach((text,i)=>{
+    const b=document.createElement("button"); b.className="option";
+    b.innerHTML=`<strong>${String.fromCharCode(65+i)})</strong> ${text}`;
+    b.onclick=()=>selectAnswer(i,b); opts.appendChild(b);
+  });
+}
+function selectAnswer(choice,btn){
+  if(answered)return;
+  answered=true;
+  const item=quiz[index];
+  userAnswers.push({item,choice});
+  document.querySelectorAll(".option").forEach((b,i)=>{b.disabled=true;if(i===item.c)b.classList.add("correct")});
+  if(choice===item.c){score++;btn.classList.add("correct");document.getElementById("feedback").textContent="✓ Resposta correta!"}
+  else {btn.classList.add("wrong");document.getElementById("feedback").textContent=`Resposta correta: ${String.fromCharCode(65+item.c)}) ${item.a[item.c]}`}
+  document.getElementById("liveScore").textContent=`Acertos: ${score}`;
+  document.getElementById("nextBtn").disabled=false;
+}
+function nextQuestion(){if(!answered)return;if(index<9){index++;renderQuestion()}else showResult()}
+function toggleHint(){document.getElementById("hint").classList.toggle("show")}
+function showResult(){
+  show("result");
+  document.getElementById("progress").style.width="100%";
+  document.getElementById("scoreText").textContent=`${score}/10`;
+  const deg=score*36;
+  document.getElementById("scoreRing").style.background=`conic-gradient(var(--cyan) 0deg,var(--purple) ${deg}deg,#18243a ${deg}deg)`;
+  const prize=document.getElementById("prize");
+  prize.style.display=score>=8?"block":"none";
+  document.getElementById("resultTitle").textContent=score>=8?"Missão concluída!":"Quase lá!";
+  document.getElementById("resultText").textContent=score>=8
+    ?"Você atingiu a pontuação necessária para receber o prêmio."
+    :"Você terminou o desafio. Tente novamente para buscar 8/10 ou mais.";
+  const review=document.getElementById("review"); review.innerHTML="";
+  userAnswers.forEach((x,i)=>{
+    const ok=x.choice===x.item.c;
+    const d=document.createElement("div"); d.className=`review-item ${ok?"ok":"no"}`;
+    d.innerHTML=`<small>${i+1}. ${x.item.cat}</small><b>${ok?"✓":"✗"} ${x.item.q}</b><small>Sua resposta: ${String.fromCharCode(65+x.choice)}) ${x.item.a[x.choice]}${ok?"":" • Correta: "+String.fromCharCode(65+x.item.c)+") "+x.item.a[x.item.c]}</small>`;
+    review.appendChild(d);
+  });
+}
+function goHome(){show("home")}
+</script>
+</body>
+</html>
