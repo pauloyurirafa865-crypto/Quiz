@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechQuiz — Python & Ada Lovelace</title>
+<style>
+
+:root{
+  --bg:#060912; --panel:#0c1220; --panel2:#10192b; --text:#eef5ff;
+  --muted:#91a1b8; --cyan:#29d9ff; --purple:#8b5cf6; --green:#35e39a;
+  --red:#ff5c7a; --border:rgba(113,143,190,.22);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--text); background:
+  radial-gradient(circle at 15% 10%,rgba(41,217,255,.10),transparent 30%),
+  radial-gradient(circle at 85% 80%,rgba(139,92,246,.13),transparent 32%),var(--bg);
+}
+body:before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.15;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.container{width:min(1000px,92%);margin:auto;position:relative}
+header{padding:42px 0 22px;text-align:center}
+.logo{display:inline-flex;align-items:center;gap:10px;font-weight:900;letter-spacing:2px;font-size:14px;color:var(--cyan)}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan)}
+h1{font-size:clamp(36px,7vw,68px);line-height:1;margin:18px 0 12px;letter-spacing:-3px}
+.gradient{background:linear-gradient(90deg,var(--cyan),#fff,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{color:var(--muted);font-size:16px}
+.screen{display:none}.screen.active{display:block}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0 55px}
+.level{
+  border:1px solid var(--border);background:linear-gradient(145deg,rgba(16,25,43,.92),rgba(8,13,25,.92));
+  border-radius:20px;padding:25px;cursor:pointer;transition:.25s;min-height:180px;
+}
+.level:hover:not(.disabled){transform:translateY(-5px);border-color:rgba(41,217,255,.65);box-shadow:0 15px 40px rgba(0,0,0,.3)}
+.level.disabled{opacity:.45;cursor:not-allowed}
+.level-icon{font-size:28px;margin-bottom:18px}.easy-icon{color:#fff}.level h2{margin:0 0 8px}.level p{margin:0;color:var(--muted);line-height:1.5}
+.badge{display:inline-block;margin-top:18px;font-size:11px;letter-spacing:1px;padding:6px 9px;border:1px solid var(--border);border-radius:999px;color:var(--cyan)}
+.quiz-head{display:flex;justify-content:space-between;align-items:center;margin:28px 0 15px;gap:15px}
+.progress-wrap{height:7px;background:#172237;border-radius:99px;overflow:hidden}.progress{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:.3s}
+.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:24px}
+.card{background:rgba(12,18,32,.94);border:1px solid var(--border);border-radius:24px;padding:30px;box-shadow:0 22px 70px rgba(0,0,0,.25)}
+.question-row{display:flex;gap:14px;align-items:flex-start}
+.q-number{font:700 13px/1 monospace;color:var(--cyan);background:rgba(41,217,255,.09);border:1px solid rgba(41,217,255,.2);padding:9px;border-radius:9px}
+h2.question{font-size:clamp(20px,3vw,29px);line-height:1.45;margin:2px 0 25px;white-space:pre-line}
+.hint-btn{
+  margin-left:auto;flex:none;border:1px solid rgba(139,92,246,.45);background:rgba(139,92,246,.10);
+  color:#c9b7ff;border-radius:12px;padding:9px 12px;cursor:pointer
+}
+.hint{display:none;margin:-8px 0 20px;padding:12px 14px;border-radius:12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);color:#c9b7ff;font-size:14px}
+.hint.show{display:block}
+.options{display:grid;gap:12px}
+.option{
+  width:100%;text-align:left;padding:16px 18px;border-radius:14px;border:1px solid var(--border);
+  background:#0d1627;color:var(--text);font-size:15px;cursor:pointer;transition:.18s;white-space:pre-line
+}
+.option:hover:not(:disabled){border-color:rgba(41,217,255,.55);background:#111f34;transform:translateX(3px)}
+.option.selected{border-color:var(--cyan);background:rgba(41,217,255,.09)}
+.option.correct{border-color:var(--green);background:rgba(53,227,154,.11)}
+.option.wrong{border-color:var(--red);background:rgba(255,92,122,.10)}
+.option:disabled{cursor:default}
+.actions{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+button.primary{
+  border:0;border-radius:13px;padding:13px 20px;background:linear-gradient(90deg,var(--cyan),#5aa8ff);
+  color:#03101a;font-weight:800;cursor:pointer
+}
+button.secondary{border:1px solid var(--border);background:#0c1423;color:var(--text);border-radius:13px;padding:12px 17px;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.result{text-align:center;padding:45px 20px}
+.score-ring{
+  width:150px;height:150px;border-radius:50%;margin:0 auto 24px;display:grid;place-items:center;
+  background:conic-gradient(var(--cyan) 0deg,var(--purple) 0deg,#18243a 0deg);
+  position:relative
+}
+.score-ring:after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--panel)}
+.score-ring strong{position:relative;z-index:1;font-size:35px}
+.result h2{font-size:32px;margin:10px 0}.result p{color:var(--muted)}
+.prize{margin:22px auto;padding:16px;max-width:520px;border-radius:16px;border:1px solid rgba(53,227,154,.35);background:rgba(53,227,154,.08);color:#aef5d4}
+.review{margin:28px 0;text-align:left;display:grid;gap:10px}
+.review-item{padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:#0b1423}
+.review-item.ok{border-left:3px solid var(--green)}.review-item.no{border-left:3px solid var(--red)}
+.review-item small{color:var(--muted)}.review-item b{display:block;margin:5px 0}\nfooter{margin:10px 0 22px;text-align:center;color:var(--muted);font-size:10px;opacity:.8}
+@media(max-width:700px){.levels{grid-template-columns:1fr}.card{padding:20px}.quiz-head{align-items:flex-start}.question-row{flex-wrap:wrap}.hint-btn{margin-left:0}.actions{gap:10px}.actions button{flex:1}}
+
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <div class="logo"><span class="dot"></span> QUIZ DA PROGRAMAÇÃO</div>
+  <h1>Desafie seu <span class="gradient">conhecimento.</span></h1>
+  <div class="subtitle">Python • Ada Lovelace • 10 desafios selecionados aleatoriamente</div>
+</header>
+
+<main id="home" class="screen active">
+  <div class="levels">
+    <div class="level" onclick="startQuiz()">
+      <div class="level-icon easy-icon">☆</div><h2>Fácil</h2>
+      <p>10 questões aleatórias das 25 de nível fácil.</p>
+      <span class="badge">DISPONÍVEL</span>
+    </div>
+    <div class="level" onclick="startQuiz('medium')">
+      <div class="level-icon">◈</div><h2>Médio</h2>
+      <p>10 questões aleatórias das 25 questões de nível médio.</p>
+      <span class="badge">DISPONÍVEL</span>
+    </div>
+    <div class="level" onclick="startQuiz('hard')">
+      <div class="level-icon">⬢</div><h2>Difícil</h2>
+      <p>10 questões aleatórias entre 25 desafios de nível difícil.</p>
+      <span class="badge">DISPONÍVEL</span>
+    </div>
+  </div>
+</main>
+
+<section id="quiz" class="screen">
+  <div class="quiz-head"><button class="secondary" onclick="goHome()">← Menu</button><strong id="topic">PYTHON</strong></div>
+  <div class="progress-wrap"><div id="progress" class="progress"></div></div>
+  <div class="meta"><span id="counter">Questão 1 de 10</span><span id="liveScore">Acertos: 0</span></div>
+  <div class="card">
+    <div class="question-row">
+      <span id="qNum" class="q-number">01</span>
+      <h2 id="question" class="question">Carregando...</h2>
+      <button class="hint-btn" onclick="toggleHint()" title="Mostrar dica">💡 Dica</button>
+    </div>
+    <div id="hint" class="hint"></div>
+    <div id="options" class="options"></div>
+    <div class="actions">
+      <span id="feedback" style="color:var(--muted);font-size:13px"></span>
+      <button id="nextBtn" class="primary" disabled onclick="nextQuestion()">Próxima →</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="card result">
+    <div id="scoreRing" class="score-ring"><strong id="scoreText">0/10</strong></div>
+    <h2 id="resultTitle">Resultado</h2>
+    <p id="resultText"></p>
+    <div id="prize" class="prize" style="display:none">🏆 <strong>Você recebeu um prêmio!</strong><br>Parabéns por alcançar pelo menos 8 acertos.</div>
+    <div id="review" class="review"></div>
+    <button class="primary" onclick="startQuiz()">Jogar novamente</button>
+    <button class="secondary" style="margin-left:8px" onclick="goHome()">Voltar ao menu</button>
+  </div>
+</section>
+
+<footer>Projeto desenvolvido por Paulo, Vitor e Thalia</footer>
+</div>
+
+
+<script>
+let currentMode = "easy";
+const easyQuestions = [
+ {cat:"Python",q:"Qual é a principal função do comando print() em Python?",a:["Ler um dado inserido pelo usuário.","Exibir uma mensagem ou resultado na tela.","Somar dois números inteiros.","Criar uma variável no código."],c:1,h:"Pense no que aparece no terminal quando você usa este comando."},
+ {cat:"Python",q:"Qual é a saída correta do comando print(5 + 3 * 2)?",a:["16","11","10","13"],c:1,h:"A multiplicação é feita antes da soma."},
+ {cat:"Python",q:"Qual função em Python é usada para receber dados digitados pelo usuário?",a:["get()","read()","input()","write()"],c:2,h:"É a função usada para entrada de dados pelo teclado."},
+ {cat:"Python",q:"Como declaramos uma variável chamada idade que armazena o valor inteiro 15?",a:["int idade = 15\n","idade := 15","idade = 15","var idade = 15"],c:2,h:"Em Python, a atribuição usa um único sinal de igual."},
+ {cat:"Python",q:"Qual dos seguintes tipos representa um texto (String) em Python?",a:["int","float","str","bool"],c:2,h:"É a abreviação de string."},
+ {cat:"Python",q:"Qual é o operador usado para verificar se dois valores são IGUAIS em Python?",a:["=","==","===","is"],c:1,h:"Ele usa dois sinais de igual."},
+ {cat:"Python",q:"O que o operador % (módulo) faz em Python?",a:["Calcula a porcentagem de um número.","Eleva um número a uma potência.","Retorna o resto de uma divisão inteira.","Divide um número por 100."],c:2,h:"Pense no que sobra depois de uma divisão inteira."},
+ {cat:"Python",q:"Qual das seguintes estruturas é usada para tomar decisões (condicional)?",a:["for","while","if / else","def"],c:2,h:"É a estrutura usada para dizer: se isso acontecer, faça aquilo."},
+ {cat:"Python",q:"O que a função len(\"Python\") retorna?",a:["6","5","\"Python\"","True"],c:0,h:"Conte quantos caracteres há na palavra."},
+ {cat:"Python",q:"Qual símbolo é usado em Python para escrever um comentário de uma linha?",a:["//","/*","#","--"],c:2,h:"É um símbolo único usado no começo do comentário."},
+ {cat:"Python",q:"Como convertemos um texto \"10\" em um número inteiro em Python?",a:["str(\"10\")","int(\"10\")","float(\"10\")","convert(\"10\")"],c:1,h:"Use a função cujo nome representa o tipo inteiro."},
+ {cat:"Python",q:"Qual será a saída do comando print(\"Olá \" + \"Mundo\")?",a:["OláMundo","Olá Mundo","Erro","\"Olá \" + \"Mundo\""],c:1,h:"O operador + pode juntar strings."},
+ {cat:"Python",q:"Qual tipo de dado pode assumir apenas os valores True ou False?",a:["str","float","bool","int"],c:2,h:"É o tipo lógico/booleano."},
+ {cat:"Python",q:"O que acontece se executarmos o código print(10 / 2) em Python?",a:["Exibe 5 (do tipo inteiro).","Exibe 5.0 (do tipo ponto flutuante).","Ocorre um erro de sintaxe.","Exibe 10/2."],c:1,h:"Em Python, a divisão com / produz um número de ponto flutuante."},
+ {cat:"Python",q:"Em Python, qual é o sinal correto utilizado para atribuir um valor a uma variável?",a:["->","=",":","=="],c:1,h:"Não confunda atribuição com comparação."},
+ {cat:"Ada Lovelace",q:"Em qual país Ada Lovelace nasceu?",a:["Brasil","Estados Unidos","Inglaterra (Reino Unido)","Japão"],c:2,h:"Ela nasceu no Reino Unido."},
+ {cat:"Ada Lovelace",q:"Qual é o título oficial concedido a Ada por seu casamento, pelo qual ela ficou mundialmente conhecida?",a:["Rainha da Inglaterra","Condessa de Lovelace","Princesa de Gales","Duquesa de Cambridge"],c:1,h:"O título contém o nome pelo qual ela ficou conhecida."},
+ {cat:"Ada Lovelace",q:"Na época de Ada Lovelace, os computadores como conhecemos hoje (com tela e teclado) já existiam?",a:["Sim, ela usava um notebook de última geração.","Sim, mas apenas em formato de computador de mesa.","Não, os computadores eletrônicos ainda não tinham sido inventados.","Não, as pessoas só usavam celulares."],c:2,h:"Pense na época histórica em que Ada viveu."},
+ {cat:"Ada Lovelace",q:"Quando Ada era criança, o que a sua mãe a incentivou a estudar para que ela não seguisse a carreira artística de seu pai?",a:["Pintura e Desenho","Dança e Teatro","Matemática e Ciência","Música e Culinária"],c:2,h:"A área envolve números, lógica e investigação."},
+ {cat:"Ada Lovelace",q:"Que tipo de máquina mecânica de voar Ada Lovelace tentou projetar quando ainda era uma adolescente?",a:["Um avião supersônico","Um foguete para ir à Lua","Uma máquina voadora (com asas mecânicas como as de um passarinho)","Um helicóptero com motor elétrico"],c:2,h:"A ideia tinha asas mecânicas inspiradas em um pássaro."},
+ {cat:"Ada Lovelace",q:"As instruções e códigos desenvolvidos por Ada Lovelace eram inseridos nas máquinas através de:",a:["Pendrives","Cartões perfurados (cartões de papel com furos)","Cabos USB","Disquetes mágicos"],c:1,h:"Era uma tecnologia física baseada em papel e furos."},
+ {cat:"Ada Lovelace",q:"O pai de Ada Lovelace era muito famoso em sua época por ser um:",a:["Poeta","Rei","Médico","Piloto"],c:0,h:"Ele era conhecido principalmente por sua poesia."},
+ {cat:"Ada Lovelace",q:"Hoje em dia, existe um dia do ano dedicado a celebrar as conquistas das mulheres na ciência e tecnologia em homenagem a Ada. Como é chamado esse dia?",a:["Dia da Informática","Dia Mundial da Internet","Ada Lovelace Day (Dia de Ada Lovelace)","Dia do Programador de Python"],c:2,h:"O nome do dia leva diretamente o nome de Ada."},
+ {cat:"Ada Lovelace",q:"Ada Lovelace faleceu ainda muito jovem, com apenas:",a:["20 anos","36 anos","50 anos","80 anos"],c:1,h:"A idade está na casa dos 30."},
+ {cat:"Ada Lovelace",q:"A ideia principal de Ada que mudou o mundo foi perceber que as máquinas do futuro não serviriam apenas para calcular números, mas também para processar:",a:["Apenas moedas de ouro","Qualquer tipo de informação (como música, imagens e textos)","Apenas equações de matemática básica","Apenas previsões do tempo"],c:1,h:"A ideia vai além de números: pense em diferentes formas de informação."}
+];
+const mediumQuestions = [
+{cat:"Python",q:"O que é um algoritmo?",a:["Uma sequência definida para alcançar um objetivo","Sequência de passos infinita","Jeito fácil de alcançar seu objetivo","É um nome simplificado para um código"],c:0,h:"Pense em uma sequência organizada de passos para resolver um problema."},
+{cat:"Python",q:"Qual nome de variável vai ser inválido?",a:["média final","media_final","Media_Final","mediafinal"],c:0,h:"Observe se o nome possui algo que Python não permite em identificadores."},
+{cat:"Python",q:"Qual código vai dar erro?",a:["a = int(input())","print(a)","2 = input()","print(\"Olá\")"],c:2,h:"Pense se um número pode receber uma atribuição."},
+{cat:"Python",q:"No código print(\"Hoje irei à festa!!\"), o que irá aparecer na tela quando executar o código?",a:["Hoje irei à festa!!","\"hoje irei à festa!!\"","print(\"Hoje irei à festa!!\")","nada"],c:0,h:"O comando print exibe o conteúdo que está dentro dele."},
+{cat:"Python",q:"No comando float(input()), o usuário pode digitar um:",a:["texto","número decimal","número inteiro","uma condição"],c:1,h:"Pense no tipo de dado representado por float."},
+{cat:"Python",q:"O que é uma variável?",a:["Uma \"gaveta\" onde guarda informações","Um tipo de erro","Código de leitura","Código condicional"],c:0,h:"Imagine um espaço usado para guardar uma informação."},
+{cat:"Python",q:"Marque o par \"valor e tipo\" correto.",a:["valor = 16.5, tipo = int","valor = \"F\", tipo = int","valor = 2.5, tipo = float","valor = 294.5, tipo = str"],c:2,h:"Observe qual tipo combina com um número decimal."},
+{cat:"Python",q:"No código a = input()\nb = input()\nprint(soma), o que há de errado?",a:["tudo","não tem a variável \"soma\"","nada","o print está sem aspas"],c:1,h:"Procure no código uma variável usada no print que não foi criada."},
+{cat:"Python",q:"No código a=5, b=3, print(f\"{a+b}\"), o que irá aparecer na tela quando executar?",a:["8","Nada","{a+b}","5"],c:0,h:"A expressão dentro das chaves é calculada."},
+{cat:"Python",q:"Observe: idade = 15\nidade = idade + 2\nprint(idade). Qual será o resultado?",a:["15","17","2","152"],c:1,h:"A variável recebe seu valor anterior mais 2."},
+{cat:"Python",q:"Qual é a principal diferença entre = e == em Python?",a:["= compara valores e == cria variáveis","= atribui um valor e == compara valores","Os dois fazem exatamente a mesma coisa","== serve para comentários"],c:1,h:"Um operador é usado para atribuição e o outro para comparação."},
+{cat:"Ada Lovelace",q:"Por que Ada Lovelace é frequentemente considerada uma das primeiras programadoras da história?",a:["Porque criou o primeiro computador eletrônico moderno","Porque escreveu um conjunto de instruções para uma máquina que poderia realizar cálculos","Porque inventou a internet","Porque criou a linguagem Python"],c:1,h:"Pense no conjunto de instruções que ela desenvolveu para uma máquina."},
+{cat:"Python",q:"Uma variável chamada nome recebe \"Ada Lovelace\". Qual é o tipo de dado armazenado?",a:["int","bool","str","float"],c:2,h:"É um texto, não um número."},
+{cat:"Python",q:"Qual situação demonstra melhor a utilidade de uma variável?",a:["Guardar uma informação para utilizá-la posteriormente no programa","Apagar automaticamente o programa","Fazer o computador funcionar sem código","Transformar qualquer número em texto"],c:0,h:"Variáveis servem para armazenar informações que podem ser usadas depois."},
+{cat:"Ada Lovelace",q:"Qual era a relação entre Ada Lovelace e Charles Babbage?",a:["Eram irmãos","Eram mãe e filho","Ada estudou e trabalhou intelectualmente com as ideias de Babbage","Ada era funcionária de uma empresa criada por Babbage"],c:2,h:"Eles trabalharam intelectualmente com as ideias relacionadas às máquinas de Babbage."},
+{cat:"Ada Lovelace",q:"Ada Lovelace percebeu algo que ia além de simplesmente fazer contas. Qual era essa ideia?",a:["Máquinas poderiam seguir instruções para trabalhar com diferentes tipos de informação","Máquinas nunca poderiam fazer cálculos","Máquinas deveriam substituir todas as pessoas","Máquinas só poderiam funcionar com números escritos à mão"],c:0,h:"A ideia envolve máquinas seguindo instruções para lidar com diferentes informações."},
+{cat:"Python",q:"Observe: a=5\nb=2\nprint(a + b * 3). Qual será o resultado?",a:["21","11","15","17"],c:1,h:"Lembre-se da ordem das operações: a multiplicação vem antes da soma."},
+{cat:"Ada Lovelace",q:"Por que os cartões perfurados eram importantes nas máquinas da época?",a:["Podiam representar instruções que a máquina deveria seguir","Serviam para conectar a máquina à internet","Eram usados como telas","Serviam para armazenar eletricidade"],c:0,h:"Pense na função dos furos: eles representavam instruções."},
+{cat:"Ada Lovelace",q:"Qual alternativa melhor explica o que era um algoritmo no contexto do trabalho de Ada?",a:["Uma sequência organizada de instruções para realizar uma tarefa","Uma peça física da máquina","Um tipo de combustível","Um aparelho usado para imprimir documentos"],c:0,h:"Um algoritmo é uma sequência organizada de instruções."},
+{cat:"Ada Lovelace",q:"Qual relação podemos fazer entre o trabalho de Ada Lovelace e linguagens como Python?",a:["Ambos envolvem a criação de instruções para que uma máquina execute tarefas","Ada Lovelace criou diretamente a linguagem Python","Python já existia na época de Ada","O trabalho de Ada não tinha nenhuma relação com programação"],c:0,h:"Pense no objetivo comum: dar instruções para uma máquina executar tarefas."},
+{cat:"Python",q:"Qual será o resultado? x = 10\ny = 3\nprint(x % y)",a:["1","3","3.33","0"],c:0,h:"O operador % retorna o resto da divisão inteira."},
+{cat:"Ada Lovelace",q:"Qual das situações abaixo mostra melhor a importância histórica de Ada Lovelace?",a:["Ela foi uma das primeiras pessoas a perceber o potencial das máquinas programáveis para muito além de cálculos simples","Ela inventou o primeiro computador com teclado e mouse","Ela criou a primeira rede social","Ela inventou a linguagem Python"],c:0,h:"A ideia principal envolve o potencial das máquinas programáveis além de simples cálculos."},
+{cat:"Ada Lovelace",q:"O pai de Ada Lovelace, Lord Byron, era conhecido principalmente por ser:",a:["Cientista","Poeta","Engenheiro","Matemático"],c:1,h:"Lord Byron ficou famoso principalmente por sua produção literária."},
+{cat:"Ada Lovelace",q:"Qual característica da educação de Ada teve grande importância para seu trabalho futuro?",a:["Ela teve contato com matemática e ciências","Ela estudou apenas literatura","Ela aprendeu somente música","Ela não recebeu educação formal"],c:0,h:"Pense nas áreas que ajudaram Ada a desenvolver seu pensamento lógico."},
+{cat:"Python",q:"Observe: numero = 10\nif numero > 5:\n    print(\"A\")\nelse:\n    print(\"B\"). O que será exibido?",a:["A","B","A e B","Nada"],c:0,h:"Compare o valor 10 com a condição numero > 5."},
+{cat:"Python",q:"Observe: idade = 15\nidade = idade + 2\nprint(idade). Qual será o resultado?",a:["15","17","2","152"],c:1,h:"A variável começa com 15 e depois recebe mais 2."}
+];
+const hardQuestions = [{"cat":"Python","q":"Observe o código: idade = 17\nif idade >= 18:\n    print(\"Maior de idade\")\nelse:\n    print(\"Menor de idade\"). Qual será a saída?","a":["Maior de idade","Menor de idade","17","Erro"],"c":1,"h":"Compare o valor de idade com 18."},{"cat":"Python","q":"Observe: nota = 7\nif nota >= 9:\n    print(\"Excelente\")\nelif nota >= 6:\n    print(\"Aprovado\")\nelse:\n    print(\"Reprovado\"). O que será exibido?","a":["Excelente","Aprovado","Reprovado","Excelente e Aprovado"],"c":1,"h":"Veja qual condição é verdadeira primeiro."},{"cat":"Python","q":"Qual será a saída? numero = 12\nif numero > 10:\n    print(\"A\")\nelif numero > 5:\n    print(\"B\")\nelse:\n    print(\"C\")","a":["A","B","C","A e B"],"c":0,"h":"12 é maior que 10?"},{"cat":"Python","q":"Observe: idade = 20\ntem_documento = True\nif idade >= 18 and tem_documento:\n    print(\"Entrada permitida\")\nelse:\n    print(\"Entrada negada\"). O que será exibido?","a":["Entrada permitida","Entrada negada","True","20"],"c":0,"h":"and exige que as duas condições sejam verdadeiras."},{"cat":"Python","q":"Qual será o resultado? idade = 16\nautorizacao = True\nif idade >= 18 or autorizacao:\n    print(\"Pode entrar\")\nelse:\n    print(\"Não pode entrar\")","a":["Pode entrar","Não pode entrar","True","Erro"],"c":0,"h":"Com or, basta uma condição ser verdadeira."},{"cat":"Python","q":"Observe: numero = 8\nif numero > 5 and numero < 10:\n    print(\"Dentro\")\nelse:\n    print(\"Fora\"). O que será exibido?","a":["Dentro","Fora","8","Erro"],"c":0,"h":"Confira as duas comparações feitas com 8."},{"cat":"Python","q":"Qual condição verifica corretamente se idade está entre 13 e 17 anos, incluindo os dois limites?","a":["idade > 13 and idade < 17","idade >= 13 and idade <= 17","idade >= 13 or idade <= 17","idade == 13 and idade == 17"],"c":1,"h":"Os dois limites também precisam ser aceitos."},{"cat":"Python","q":"Observe: x = 5\ny = 10\nif x > y:\n    print(\"1\")\nelif x < y:\n    print(\"2\")\nelse:\n    print(\"3\"). Qual será a saída?","a":["1","2","3","1 e 2"],"c":1,"h":"Compare 5 e 10."},{"cat":"Python","q":"Qual será o resultado? numero = 15\nif numero % 2 == 0:\n    print(\"Par\")\nelse:\n    print(\"Ímpar\")","a":["Par","Ímpar","15","Erro"],"c":1,"h":"% retorna o resto da divisão."},{"cat":"Python","q":"Observe: senha = \"python\"\nif senha == \"Python\":\n    print(\"Acesso permitido\")\nelse:\n    print(\"Acesso negado\"). Por que o acesso será negado?","a":["Porque Python não permite comparar textos","Porque \"python\" e \"Python\" diferem entre maiúsculas e minúsculas","Porque if só funciona com números","Porque == serve para atribuição"],"c":1,"h":"Observe a diferença entre as duas palavras."},{"cat":"Python","q":"Qual será a saída? idade = 18\nif idade > 18:\n    print(\"A\")\nelif idade == 18:\n    print(\"B\")\nelse:\n    print(\"C\")","a":["A","B","C","A e B"],"c":1,"h":"18 é igual a 18."},{"cat":"Python","q":"Observe: nota = 8\nif nota >= 7:\n    if nota >= 9:\n    print(\"Excelente\")\nelse:\n    print(\"Aprovado\")\nelse:\n    print(\"Reprovado\"). Qual será a saída?","a":["Excelente","Aprovado","Reprovado","Aprovado e Excelente"],"c":1,"h":"A nota passa de 7, mas não chega a 9."},{"cat":"Python","q":"Qual condição significa que uma pessoa NÃO possui 18 anos?","a":["idade == 18","idade != 18","idade >= 18","idade <= 18"],"c":1,"h":"Procure o operador que significa diferente de."},{"cat":"Python","q":"Observe: numero = 10\nif numero >= 5 and numero <= 15:\n    print(\"X\")\nelse:\n    print(\"Y\"). Qual será a saída?","a":["X","Y","10","Erro"],"c":0,"h":"10 está entre 5 e 15."},{"cat":"Python","q":"Observe: temperatura = 35\nif temperatura < 15:\n    print(\"Frio\")\nelif temperatura < 30:\n    print(\"Agradável\")\nelif temperatura < 40:\n    print(\"Quente\")\nelse:\n    print(\"Muito quente\"). O que será exibido?","a":["Frio","Agradável","Quente","Muito quente"],"c":2,"h":"35 é menor que 40, mas não menor que 30."},{"cat":"Python","q":"Qual condição permite continuar somente se idade for maior ou igual a 18 E a senha estiver correta?","a":["if idade >= 18 or senha == \"1234\":","if idade >= 18 and senha == \"1234\":","if idade <= 18 and senha != \"1234\":","if idade == 18 or senha != \"1234\":"],"c":1,"h":"A palavra E corresponde ao operador and."},{"cat":"Python","q":"Observe: x = 4\nif x > 2:\n    print(\"A\")\nif x > 3:\n    print(\"B\")\nelse:\n    print(\"C\"). Qual será a saída?","a":["A","B","A e B","A e C"],"c":2,"h":"São dois if independentes, e ambas as condições são verdadeiras."},{"cat":"Python","q":"Qual será a saída? numero = 6\nif numero > 10:\n    print(\"A\")\nelif numero > 5:\n    print(\"B\")\nelif numero > 2:\n    print(\"C\")\nelse:\n    print(\"D\")","a":["A","B","C","D"],"c":1,"h":"A primeira condição verdadeira é numero > 5."},{"cat":"Python","q":"Observe: idade = 12\nacompanhado = False\nif idade >= 18 or acompanhado:\n    print(\"Permitido\")\nelse:\n    print(\"Não permitido\"). O que será exibido?","a":["Permitido","Não permitido","False","12"],"c":1,"h":"As duas partes do or são falsas."},{"cat":"Python","q":"Qual será a saída? a = 10\nb = 10\nif a > b:\n    print(\"Maior\")\nelif a < b:\n    print(\"Menor\")\nelse:\n    print(\"Igual\")","a":["Maior","Menor","Igual","Erro"],"c":2,"h":"Os dois valores são iguais."},{"cat":"Ada Lovelace","q":"Uma máquina recebe instruções diferentes dependendo de uma situação. Qual conceito da programação se aproxima dessa ideia?","a":["Estrutura condicional","Comentário","Variável de texto","Operador matemático"],"c":0,"h":"É a estrutura que permite tomar decisões com base em condições."},{"cat":"Ada Lovelace","q":"Qual estrutura do Python é utilizada principalmente para executar uma ação quando uma condição é verdadeira?","a":["print","input","if","str"],"c":2,"h":"Pense na palavra usada para iniciar uma condição."},{"cat":"Ada Lovelace","q":"Um programa deve informar Aprovado quando a nota for 7 ou maior. Qual lógica está correta?","a":["if nota > 7:\n    print(\"Aprovado\") else:\n    print(\"Reprovado\")","if nota >= 7:\n    print(\"Aprovado\")\nelse:\n    print(\"Reprovado\")","if nota == 7:\n    print(\"Aprovado\")\nelse:\n    print(\"Reprovado\")","if nota < 7:\n    print(\"Aprovado\") else:\n    print(\"Reprovado\")"],"c":1,"h":"A condição precisa incluir a nota 7."},{"cat":"Ada Lovelace","q":"Por que estruturas condicionais são úteis dentro de uma sequência de instruções?","a":["Permitem escolher ações diferentes dependendo de uma condição","Fazem qualquer computador funcionar sem energia","Substituem todas as variáveis","Servem apenas para exibir textos"],"c":0,"h":"Elas permitem que o programa escolha o que fazer."},{"cat":"Ada Lovelace","q":"Observe: idade = 16\nnota = 8\nif idade >= 18:\n    print(\"Adulto\")\nelif nota >= 7:\n    print(\"Aprovado\")\nelse:\n    print(\"Reprovado\"). Qual será a saída?","a":["Adulto","Aprovado","Reprovado","Adulto e Aprovado"],"c":1,"h":"A primeira condição é falsa; depois o elif é verificado."}];
+let quiz=[], index=0, score=0, answered=false, userAnswers=[];
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
+function startQuiz(mode="easy"){
+  currentMode=mode;
+  const source = mode==="medium" ? mediumQuestions : mode==="hard" ? hardQuestions : easyQuestions;
+  if(mode==="hard") {
+    quiz=shuffle(source).slice(0,10);
+  } else {
+    const py=shuffle(source.filter(x=>x.cat==="Python")).slice(0,5);
+    const ada=shuffle(source.filter(x=>x.cat==="Ada Lovelace")).slice(0,5);
+    quiz=shuffle([...py,...ada]);
+  }
+  index=0; score=0; answered=false; userAnswers=[];
+  show("quiz"); renderQuestion();
+}
+function show(id){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");window.scrollTo({top:0,behavior:"smooth"})}
+function renderQuestion(){
+  answered=false;
+  const item=quiz[index];
+  document.getElementById("topic").textContent=item.cat.toUpperCase();
+  document.getElementById("counter").textContent=`Questão ${index+1} de 10`;
+  document.getElementById("liveScore").textContent=`Acertos: ${score}`;
+  document.getElementById("progress").style.width=`${(index/10)*100}%`;
+  document.getElementById("qNum").textContent=String(index+1).padStart(2,"0");
+  document.getElementById("question").textContent=item.q;
+  document.getElementById("hint").textContent="💡 "+item.h;
+  document.getElementById("hint").classList.remove("show");
+  document.getElementById("feedback").textContent="";
+  const next=document.getElementById("nextBtn"); next.disabled=true;
+  next.textContent=index===9?"Ver resultado →":"Próxima →";
+  const opts=document.getElementById("options"); opts.innerHTML="";
+  item.a.forEach((text,i)=>{
+    const b=document.createElement("button"); b.className="option";
+    b.innerHTML=`<strong>${String.fromCharCode(65+i)})</strong> ${text}`;
+    b.onclick=()=>selectAnswer(i,b); opts.appendChild(b);
+  });
+}
+function selectAnswer(choice,btn){
+  if(answered)return;
+  answered=true;
+  const item=quiz[index];
+  userAnswers.push({item,choice});
+  document.querySelectorAll(".option").forEach((b,i)=>{b.disabled=true;if(i===item.c)b.classList.add("correct")});
+  if(choice===item.c){score++;btn.classList.add("correct");document.getElementById("feedback").textContent="✓ Resposta correta!"}
+  else {btn.classList.add("wrong");document.getElementById("feedback").textContent=`Resposta correta: ${String.fromCharCode(65+item.c)}) ${item.a[item.c]}`}
+  document.getElementById("liveScore").textContent=`Acertos: ${score}`;
+  document.getElementById("nextBtn").disabled=false;
+}
+function nextQuestion(){if(!answered)return;if(index<9){index++;renderQuestion()}else showResult()}
+function toggleHint(){document.getElementById("hint").classList.toggle("show")}
+function showResult(){
+  show("result");
+  document.getElementById("progress").style.width="100%";
+  document.getElementById("scoreText").textContent=`${score}/10`;
+  const deg=score*36;
+  document.getElementById("scoreRing").style.background=`conic-gradient(var(--cyan) 0deg,var(--purple) ${deg}deg,#18243a ${deg}deg)`;
+  document.getElementById("prize").style.display=score>=8?"block":"none";
+  document.getElementById("resultTitle").textContent=score>=8?"Missão concluída!":"Quase lá!";
+  document.getElementById("resultText").textContent=score>=8?"Você atingiu a pontuação necessária para receber o prêmio.":"Você terminou o desafio. Tente novamente para buscar 8/10 ou mais.";
+  const review=document.getElementById("review"); review.innerHTML="";
+  userAnswers.forEach((x,i)=>{
+    const ok=x.choice===x.item.c;
+    const d=document.createElement("div"); d.className=`review-item ${ok?"ok":"no"}`;
+    d.innerHTML=`<small>${i+1}. ${x.item.cat}</small><b>${ok?"✓":"✗"} ${x.item.q}</b><small>Sua resposta: ${String.fromCharCode(65+x.choice)}) ${x.item.a[x.choice]}${ok?"":" • Correta: "+String.fromCharCode(65+x.item.c)+") "+x.item.a[x.item.c]}</small>`;
+    review.appendChild(d);
+  });
+}
+function goHome(){show("home")}
+</script>
+</body>
+</html>
