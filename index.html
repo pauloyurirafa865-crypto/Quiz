@@ -46,7 +46,11 @@ h1{font-size:clamp(36px,7vw,68px);line-height:1;margin:18px 0 12px;letter-spacin
 .card{background:rgba(12,18,32,.94);border:1px solid var(--border);border-radius:24px;padding:30px;box-shadow:0 22px 70px rgba(0,0,0,.25)}
 .question-row{display:flex;gap:14px;align-items:flex-start}
 .q-number{font:700 13px/1 monospace;color:var(--cyan);background:rgba(41,217,255,.09);border:1px solid rgba(41,217,255,.2);padding:9px;border-radius:9px}
-h2.question{font-size:clamp(20px,3vw,29px);line-height:1.45;margin:2px 0 25px;white-space:pre-wrap}
+.question{flex:1;min-width:0;font-size:clamp(20px,3vw,29px);line-height:1.45;margin:2px 0 25px;font-weight:800}
+.question-prompt{white-space:pre-wrap;margin-bottom:10px}
+.code-block{display:block;max-width:100%;box-sizing:border-box;overflow-x:auto;white-space:pre;margin:12px 0;padding:16px;border:1px solid var(--border);border-radius:12px;background:#070d18;color:#d7e5f8;font:400 15px/1.7 Consolas,"Courier New",monospace;tab-size:4}
+.code-block code{font:inherit;white-space:pre}
+.question-after{white-space:pre-wrap;margin-top:12px;font-weight:800}
 .hint-btn{
   margin-left:auto;flex:none;border:1px solid rgba(139,92,246,.45);background:rgba(139,92,246,.10);
   color:#c9b7ff;border-radius:12px;padding:9px 12px;cursor:pointer
@@ -124,7 +128,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   <div class="card">
     <div class="question-row">
       <span id="qNum" class="q-number">01</span>
-      <h2 id="question" class="question">Carregando...</h2>
+      <div id="question" class="question">Carregando...</div>
       <button class="hint-btn" onclick="toggleHint()" title="Mostrar dica">💡 Dica</button>
     </div>
     <div id="hint" class="hint"></div>
@@ -227,6 +231,110 @@ function startQuiz(mode="easy"){
   show("quiz"); renderQuestion();
 }
 function show(id){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");window.scrollTo({top:0,behavior:"smooth"})}
+function renderQuestionText(questionText){
+  const root = document.getElementById("question");
+  root.replaceChildren();
+  const lines = String(questionText ?? "").replace(/\r/g, "").split("\n");
+  if (lines.length === 1) {
+    const prompt = document.createElement("div");
+    prompt.className = "question-prompt";
+    prompt.textContent = lines[0];
+    root.appendChild(prompt);
+    return;
+  }
+
+  // Detecta código Python mesmo quando foi colado na mesma linha do enunciado.
+  const inlineCodePattern = /\b(?:if|elif|else|for|while|print|input|def|return|class|import|from|try|except|with)\b|\b[A-Za-z_]\w*\s*(?:==|!=|>=|<=|=|%=|\+=|-=|\*=|\/=)\s*/;
+  let codeStartLine = -1;
+  let firstLineCodeOffset = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(inlineCodePattern);
+    if (match) {
+      // Palavras de Python em texto corrido não viram código por acidente:
+      // só consideramos a primeira linha se o padrão estiver após um separador de enunciado.
+      if (i === 0) {
+        const pos = match.index ?? 0;
+        const prefix = line.slice(0, pos);
+        if (!/[:?]\s*$/.test(prefix) && !/\b(?:Observe|observe)\s*(?:o código|:)?\s*$/i.test(prefix)) {
+          // Uma atribuição explícita é suficiente, mesmo depois de "Qual será a saída?".
+          const assignment = line.match(/\b[A-Za-z_]\w*\s*(?:==|!=|>=|<=|=|%=|\+=|-=|\*=|\/=)\s*/);
+          if (!assignment) continue;
+          firstLineCodeOffset = assignment.index;
+        } else {
+          firstLineCodeOffset = pos;
+        }
+      } else {
+        codeStartLine = i;
+      }
+      if (i === 0) codeStartLine = 0;
+      break;
+    }
+  }
+
+  if (codeStartLine < 0) {
+    const prompt = document.createElement("div");
+    prompt.className = "question-prompt";
+    prompt.textContent = lines.join("\n");
+    root.appendChild(prompt);
+    return;
+  }
+
+  let promptLines = [];
+  let codeLines = [];
+  let afterLines = [];
+  if (codeStartLine === 0) {
+    const first = lines[0];
+    if (firstLineCodeOffset > 0) {
+      promptLines.push(first.slice(0, firstLineCodeOffset).trim());
+      codeLines.push(first.slice(firstLineCodeOffset));
+    } else {
+      codeLines.push(first);
+    }
+  } else {
+    promptLines = lines.slice(0, codeStartLine);
+    codeLines.push(lines[codeStartLine]);
+  }
+
+  const afterPattern = /^\s*(?:Qual(?: será| seria| é| das| condição| estrutura| alternativa| conceito| característica| relação| das situações)?\b|O que\b|Por que\b|Por qual\b|Como\b|Qualquer dúvida)/i;
+  let foundAfter = false;
+  for (let i = codeStartLine + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!foundAfter && afterPattern.test(line)) {
+      foundAfter = true;
+      afterLines.push(line);
+    } else if (foundAfter) {
+      afterLines.push(line);
+    } else {
+      codeLines.push(line);
+    }
+  }
+
+  const promptText = promptLines.join("\n").trim();
+  if (promptText) {
+    const prompt = document.createElement("div");
+    prompt.className = "question-prompt";
+    prompt.textContent = promptText;
+    root.appendChild(prompt);
+  }
+
+  const pre = document.createElement("pre");
+  pre.className = "code-block";
+  const code = document.createElement("code");
+  code.className = "language-python";
+  code.textContent = codeLines.join("\n").replace(/^\n+|\n+$/g, "");
+  pre.appendChild(code);
+  root.appendChild(pre);
+
+  const afterText = afterLines.join("\n").trim();
+  if (afterText) {
+    const after = document.createElement("div");
+    after.className = "question-after";
+    after.textContent = afterText;
+    root.appendChild(after);
+  }
+}
+
 function renderQuestion(){
   answered=false;
   const item=quiz[index];
@@ -235,7 +343,7 @@ function renderQuestion(){
   document.getElementById("liveScore").textContent=`Acertos: ${score}`;
   document.getElementById("progress").style.width=`${(index/10)*100}%`;
   document.getElementById("qNum").textContent=String(index+1).padStart(2,"0");
-  document.getElementById("question").textContent=item.q;
+  renderQuestionText(item.q);
   document.getElementById("hint").textContent="💡 "+item.h;
   document.getElementById("hint").classList.remove("show");
   document.getElementById("feedback").textContent="";
@@ -244,7 +352,10 @@ function renderQuestion(){
   const opts=document.getElementById("options"); opts.innerHTML="";
   item.a.forEach((text,i)=>{
     const b=document.createElement("button"); b.className="option";
-    b.innerHTML=`<strong>${String.fromCharCode(65+i)})</strong> ${text}`;
+    const letter = document.createElement("strong");
+    letter.textContent = `${String.fromCharCode(65+i)}) `;
+    b.appendChild(letter);
+    b.appendChild(document.createTextNode(String(text)));
     b.onclick=()=>selectAnswer(i,b); opts.appendChild(b);
   });
 }
@@ -274,7 +385,15 @@ function showResult(){
   userAnswers.forEach((x,i)=>{
     const ok=x.choice===x.item.c;
     const d=document.createElement("div"); d.className=`review-item ${ok?"ok":"no"}`;
-    d.innerHTML=`<small>${i+1}. ${x.item.cat}</small><b>${ok?"✓":"✗"} ${x.item.q}</b><small>Sua resposta: ${String.fromCharCode(65+x.choice)}) ${x.item.a[x.choice]}${ok?"":" • Correta: "+String.fromCharCode(65+x.item.c)+") "+x.item.a[x.item.c]}</small>`;
+    const category = document.createElement("small");
+    category.textContent = `${i+1}. ${x.item.cat}`;
+    const question = document.createElement("b");
+    question.style.whiteSpace = "pre-wrap";
+    question.textContent = `${ok?"✓":"✗"} ${x.item.q}`;
+    const answer = document.createElement("small");
+    answer.style.whiteSpace = "pre-wrap";
+    answer.textContent = `Sua resposta: ${String.fromCharCode(65+x.choice)}) ${x.item.a[x.choice]}${ok?"":" • Correta: "+String.fromCharCode(65+x.item.c)+") "+x.item.a[x.item.c]}`;
+    d.append(category, question, answer);
     review.appendChild(d);
   });
 }
